@@ -17,6 +17,11 @@ namespace HCGStudio.DongBot.Reminder
         public IMessageSender MessageSender { get; set; }
         private List<ReminderEvents> Events { get; }
         private Timer Timer { get; }
+
+        private class TimeState
+        {
+            public int LastInvoke { get; set; } = -1;
+        }
         public Reminder()
         {
             try
@@ -24,18 +29,15 @@ namespace HCGStudio.DongBot.Reminder
                 Events = JsonConvert.DeserializeObject<List<ReminderEvents>>(File.ReadAllText("reminders.json"));
                 Timer = new Timer(async state =>
                 {
-                    dynamic last = state;
-                    if (last?.LastInvoke == DateTime.Now.Hour)
-                    {
+                    var last = state as TimeState;
+                    if (last?.LastInvoke == DateTime.Now.Hour) 
                         return;
-                    }
-
-                    if (last?.LastInvoke is int)
+                    if (last != null)
                         last.LastInvoke = DateTime.Now.Hour;
                     if (DateTime.Now.Minute != 0)
                         return;
                     await Remind();
-                },new {LastInvoke = -1},0,1000);
+                },new TimeState(), 0,1000);
                 
             }
             catch
