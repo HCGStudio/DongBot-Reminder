@@ -24,10 +24,18 @@ namespace HCGStudio.DongBot.Reminder
                 Events = JsonConvert.DeserializeObject<List<ReminderEvents>>(File.ReadAllText("reminders.json"));
                 Timer = new Timer(async state =>
                 {
-                    if(DateTime.Now.Minute != 0)
+                    dynamic last = state;
+                    if (last?.LastInvoke == DateTime.Now.Hour)
+                    {
+                        return;
+                    }
+
+                    if (last?.LastInvoke is int)
+                        last.LastInvoke = DateTime.Now.Hour;
+                    if (DateTime.Now.Minute != 0)
                         return;
                     await Remind();
-                },null,0,1000);
+                },new {LastInvoke = -1},0,1000);
                 
             }
             catch
