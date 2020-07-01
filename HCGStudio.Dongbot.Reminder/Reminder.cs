@@ -30,15 +30,15 @@ namespace HCGStudio.DongBot.Reminder
                 Timer = new Timer(async state =>
                 {
                     var last = state as TimeState;
-                    if (last?.LastInvoke == DateTime.Now.Hour) 
+                    if (last?.LastInvoke == DateTime.Now.Hour)
                         return;
                     if (last != null)
                         last.LastInvoke = DateTime.Now.Hour;
                     if (DateTime.Now.Minute != 0)
                         return;
                     await Remind();
-                },new TimeState(), 0,1000);
-                
+                }, new TimeState(), 0, 1000);
+
             }
             catch
             {
@@ -46,7 +46,25 @@ namespace HCGStudio.DongBot.Reminder
             }
         }
 
-        [OnKeyword("查看ddl", "查看提醒", "lsddl", KeywordPolicy = KeywordPolicy.Trim,InvokePolicies = InvokePolicies.Group)]
+        [OnKeyword("重载提醒事项", InvokePolicies = InvokePolicies.Group | InvokePolicies.GroupAt, RequireSuperUser = true)]
+        public async Task ReloadReminders(long groupId, long userId)
+        {
+            try
+            {
+                var newEvents = JsonConvert.DeserializeObject<IEnumerable<ReminderEvents>>(await File.ReadAllTextAsync("reminders.json"));
+                Events.Clear();
+                Events.AddRange(newEvents);
+                await MessageSender.SendGroupAsync(groupId, (SimpleMessage)"重新加载成功！");
+                await ShowAllReminder(groupId, userId);
+            }
+            catch
+            {
+                await MessageSender.SendGroupAsync(groupId, (SimpleMessage)"重新加载失败！");
+            }
+        }
+
+
+        [OnKeyword("查看ddl", "查看提醒", "lsddl", KeywordPolicy = KeywordPolicy.Trim, InvokePolicies = InvokePolicies.Group)]
         public async Task ShowAllReminder(long groupId, long userId)
         {
 
@@ -87,21 +105,22 @@ namespace HCGStudio.DongBot.Reminder
         {
             var currentHour = DateTime.Now.Hour;
             var events = from remindEvent in Events
-                where remindEvent.DeadLine > DateTime.Now && remindEvent.RemindHours.Contains(currentHour)
-                orderby remindEvent.DeadLine
-                group remindEvent by remindEvent.GroupId
+                         where remindEvent.DeadLine > DateTime.Now && remindEvent.RemindHours.Contains(currentHour)
+                         orderby remindEvent.DeadLine
+                         group remindEvent by remindEvent.GroupId
                 into newGroup
-                orderby newGroup.Key
-                select newGroup;
+                         orderby newGroup.Key
+                         select newGroup;
             foreach (var grouping in events)
             {
+                var builder = new MessageBuilder();
                 foreach (var reminder in grouping)
                 {
-                    await MessageSender.SendGroupAsync(reminder.GroupId, (SimpleMessage)reminder.ToString());
-                    await Task.Delay(50);
-                    await MessageSender.SendGroupAsync(reminder.GroupId, (SimpleMessage) "我也要做加把劲骑士了！");
-                    await Task.Delay(100);
+                    builder.Append((SimpleMessage)$"{reminder}\n");
                 }
+
+                await MessageSender.SendGroupAsync(grouping.Key, builder.ToMessage());
+                await MessageSender.SendGroupAsync(grouping.Key, (SimpleMessage)"我也要做加把劲骑士了！");
             }
         }
 
