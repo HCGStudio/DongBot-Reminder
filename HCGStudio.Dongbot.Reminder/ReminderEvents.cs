@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace HCGStudio.DongBot.Reminder
 {
@@ -10,6 +9,7 @@ namespace HCGStudio.DongBot.Reminder
         public DateTime DeadLine { get; set; }
         public SortedSet<int> RemindHours { get; set; } = new SortedSet<int>();
         public string RemindContent { get; set; } = string.Empty;
+
         public override string ToString()
         {
             var remind = DeadLine - DateTime.Now;
